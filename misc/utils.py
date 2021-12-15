@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-# import GuideReLU as GReLU
+from . import GuideReLU as GReLU
 import models.vgg16 as vgg16
 import models.vgg_utils as vgg_utils
 from skimage.transform import resize
@@ -10,11 +10,14 @@ import os,cv2
 import tensorflow as tf
 from tensorflow.python.framework import graph_util
 
-def guided_BP(image, label_id = -1):	
-	g = tf.get_default_graph()
+def guided_BP(image, label_id = -1):
+  # disable eager execution
+	tf.compat.v1.disable_eager_execution()
+
+	g = tf.compat.v1.get_default_graph()
 	with g.gradient_override_map({'Relu': 'GuidedRelu'}):
-		label_vector = tf.placeholder("float", [None, 1000])
-		input_image = tf.placeholder("float", [None, 224, 224, 3])
+		label_vector = tf.compat.v1.placeholder("float", [None, 1000])
+		input_image = tf.compat.v1.placeholder("float", [None, 224, 224, 3])
 
 		vgg = vgg16.Vgg16()
 		with tf.name_scope("content_vgg"):
@@ -25,10 +28,10 @@ def guided_BP(image, label_id = -1):
 		# Guided backpropagtion back to input layer
 		gb_grad = tf.gradients(cost, input_image)[0]
 
-		init = tf.global_variables_initializer()
+		init = tf.compat.v1.global_variables_initializer()
 	
 	# Run tensorflow 
-	with tf.Session(graph=g) as sess:    
+	with tf.compat.v1.Session(graph=g) as sess:    
 		sess.run(init)
 		output = [0.0]*vgg.prob.get_shape().as_list()[1] #one-hot embedding for desired class activations
 		if label_id == -1:
