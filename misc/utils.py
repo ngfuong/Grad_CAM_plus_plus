@@ -1,12 +1,12 @@
 import numpy as np
 import tensorflow as tf
-import GuideReLU as GReLU
+# import GuideReLU as GReLU
 import models.vgg16 as vgg16
 import models.vgg_utils as vgg_utils
 from skimage.transform import resize
 import matplotlib.pyplot as plt
 import os,cv2
-from scipy.misc import imread, imresize
+# from scipy.misc import imread, imresize
 import tensorflow as tf
 from tensorflow.python.framework import graph_util
 
@@ -38,7 +38,7 @@ def guided_BP(image, label_id = -1):
 
 			#creating the output vector for the respective class
 			index = np.argmax(prob)
-			print "Predicted_class: ", index
+			print("Predicted_class: ", index)
 			output[index] = 1.0
 
 		else:
@@ -49,16 +49,19 @@ def guided_BP(image, label_id = -1):
 	return gb_grad_value[0] 
 
 def grad_CAM_plus(filename, label_id, output_filename):
-	g = tf.get_default_graph()
-	init = tf.global_variables_initializer()
+	# disable eager execution
+	tf.compat.v1.disable_eager_execution()
+	
+	g = tf.compat.v1.get_default_graph()
+	init = tf.compat.v1.global_variables_initializer()
 	
 	# Run tensorflow 
-	sess = tf.Session()
+	sess = tf.compat.v1.Session()
 
 	#define your tensor placeholders for, labels and images
-	label_vector = tf.placeholder("float", [None, 1000])
-	input_image = tf.placeholder("float", [1, 224, 224, 3])
-	label_index = tf.placeholder("int64", ())
+	label_vector = tf.compat.v1.placeholder("float", [None, 1000])
+	input_image = tf.compat.v1.placeholder("float", [1, 224, 224, 3])
+	label_index = tf.compat.v1.placeholder("int64", ())
 
 	#load vgg16 model
 	vgg = vgg16.Vgg16()
@@ -95,13 +98,13 @@ def grad_CAM_plus(filename, label_id, output_filename):
 		#creating the output vector for the respective class
 		index = np.argmax(prob_val)
 		orig_score = prob_val[0][index]
-		print "Predicted_class: ", index
+		print("Predicted_class: ", index)
 		output[index] = 1.0
 		label_id = index
 	else:
 		output[label_id] = 1.0	
 	output = np.array(output)
-	print label_id
+	print(label_id)
 	conv_output, conv_first_grad, conv_second_grad, conv_third_grad = sess.run([target_conv_layer, first_derivative, second_derivative, triple_derivative], feed_dict={input_image:[img1], label_index:label_id, label_vector: output.reshape((1,-1))})
 	
 	global_sum = np.sum(conv_output[0].reshape((-1,conv_first_grad[0].shape[2])), axis=0)
@@ -121,11 +124,11 @@ def grad_CAM_plus(filename, label_id, output_filename):
 
 	alphas_thresholding = np.where(weights, alphas, 0.0)
 
-        alpha_normalization_constant = np.sum(np.sum(alphas_thresholding, axis=0),axis=0)
-        alpha_normalization_constant_processed = np.where(alpha_normalization_constant != 0.0, alpha_normalization_constant, np.ones(alpha_normalization_constant.shape))
+	alpha_normalization_constant = np.sum(np.sum(alphas_thresholding, axis=0),axis=0)
+	alpha_normalization_constant_processed = np.where(alpha_normalization_constant != 0.0, alpha_normalization_constant, np.ones(alpha_normalization_constant.shape))
 
 
-        alphas /= alpha_normalization_constant_processed.reshape((1,1,conv_first_grad[0].shape[2]))
+	alphas /= alpha_normalization_constant_processed.reshape((1,1,conv_first_grad[0].shape[2]))
 
 
 	
